@@ -94,6 +94,8 @@ static char* mqttBrokerHost =  "localhost";  // TODO improve hacky configuration
 static int   mqttBrokerPort = 1883;
 static const int keepalive = 60;
 static const bool clean_session = true;
+static char* mqttBrokerUsername = "homeassistant";
+static char* mqttBrokerPassword = "homeassistant";
 
 /* OpenThings definitions */
 static const uint8_t engManufacturerId = 0x04;   // Energenie Manufacturer Id
@@ -610,7 +612,7 @@ void my_message_callback(struct mosquitto *mosq, void *userdata,
         }
 
 
-    }else{
+    } else {
         log4c_category_warn(clientlog, 
                            "Can't handle messages for %s yet", topics[2]);
     }
@@ -621,14 +623,14 @@ void my_connect_callback(struct mosquitto *mosq, void *userdata, int result)
 {
     log4c_category_log(clientlog, LOG4C_PRIORITY_TRACE, "%s", __FUNCTION__);
 
-    if(!result){
+    if(!result) {
         log4c_category_log(clientlog, LOG4C_PRIORITY_NOTICE, 
                            "Connected to broker at %s", mqttBrokerHost);
         /* Subscribe to broker information topics on successful connect. */
         mosquitto_subscribe(mosq, NULL, MQTT_TOPIC_ENER002_COMMAND "/#", 2);
 
         mosquitto_subscribe(mosq, NULL, MQTT_TOPIC_ETRV_COMMAND "/#", 2);
-    }else{
+    } else {
         log4c_category_log(clientlog, LOG4C_PRIORITY_WARN, 
                            "Connect Failed with error %d", result);
     }
@@ -675,7 +677,7 @@ void my_log_callback(struct mosquitto *mosq, void *userdata, int level,
 }
 
 // receive in variable length packet mode, display and resend. Data with swapped first 2 bytes
-int main(int argc, char **argv){
+int main(int argc, char **argv) {
     		
     struct mosquitto *mosq = NULL;
     struct ReceivedMsgData msgData;
@@ -745,17 +747,18 @@ int main(int argc, char **argv){
 
     mosquitto_lib_init();
     mosq = mosquitto_new("Energenie Controller", clean_session, NULL);
-    if(!mosq){
+    if(!mosq) {
         log4c_category_log(clientlog, LOG4C_PRIORITY_CRIT, "Out of memory");
         return ERROR_MOSQ_NEW;
     }
+    mosquitto_username_pw_set(mosq, mqttBrokerUsername, mqttBrokerPassword);
     mosquitto_log_callback_set(mosq, my_log_callback);
     mosquitto_connect_callback_set(mosq, my_connect_callback);
     mosquitto_message_callback_set(mosq, my_message_callback);
     mosquitto_subscribe_callback_set(mosq, my_subscribe_callback);
 
     if((err = mosquitto_connect_async(mosq, mqttBrokerHost, mqttBrokerPort, keepalive)) 
-       != MOSQ_ERR_SUCCESS){
+       != MOSQ_ERR_SUCCESS) {
         log4c_category_log(clientlog, LOG4C_PRIORITY_CRIT, 
                            "Unable to connect: %d", err);
         return ERROR_MOSQ_CONNECT;
@@ -777,7 +780,7 @@ int main(int argc, char **argv){
 
     // clear all the flags from the message data
     memset(&msgData, 0, sizeof(msgData));
-    while (1){
+    while (1) {
 
         HRF_receive_FSK_msg(encryptId, eTRVProductId, engManufacturerId, &msgData );
 
